@@ -1,7 +1,7 @@
 from textblob import TextBlob
 
 #Read and open raw text file
-text_file = open("/Users/aesungpark/Documents/Richard/Translator/sample_text_eng.txt", "r").read()
+text_file = open("<FILENAME>", "r").read()
 content = text_file.decode('utf-8')
 #print content
 
