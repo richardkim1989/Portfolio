@@ -1,0 +1,35 @@
+from textblob import TextBlob
+
+#First translation
+english_text_1 = TextBlob("Hello, how are you? My name is Richard Kim. Nice to meet you. Thank you all for your time today. Let's get started.")
+korean_text_1 = english_text_1.translate(to='ko')
+print korean_text_1
+
+#Second translation
+def replace_all(text, dic):
+    for i, j in dic.iteritems():
+        text = text.replace(i, j)
+    return text
+
+#Dictionary
+translator = {
+    u"안녕하세요":u"안녕하십니까",
+    u"어떻게 당신은?":u"잘 지내셨습니까?",
+    u"내 이름은":u"제 이름은",
+    u"시간 오늘 여러분 모두 감사합니다":u"여러분 오늘 시간 내주셔서 감사합니다",
+    u"시작하자":u"시작하겠습니다"
+}
+
+
+#WIP
+print replace_all(korean_text_1, translator)
+
+environment = {
+    "business":"formal",
+    "school":"informal"
+}
+
+audience = {
+    "friend":"informal",
+    "coworker": "formal"
+}
