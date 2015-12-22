@@ -48,5 +48,4 @@ baseline = mean(elantraTrain$ElantraSales)
 SST = sum((mean(elantraTrain$ElantraSales) - elantraTest$ElantraSales)^2)
 1 - (SSE/SST)
 max(abs(prediction - elantraTest$ElantraSales))
-which.max(abs(prediction - elantraTest$ElantraSales)
-head(elantraTest)
+elantraTest$Month[which.max(abs(prediction - elantraTest$ElantraSales))]
