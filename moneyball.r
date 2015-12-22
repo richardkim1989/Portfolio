@@ -22,12 +22,10 @@ slg = c(0.540, 0.450, 0.374, 0.447, 0.500)
 salary = c(1400000, 1065000, 295000, 800000, 300000)
 
 roster = data.frame(player, obp, slg, salary)
-roster
 str(roster)
 plot(roster$obp ~ roster$salary)
 plot(roster$slg ~ roster$salary)
 x = -804.63 + 2737.77*roster$obp + 1584.91*roster$slg
-x
 
 
 teamRank = c(1, 2, 3, 3, 4, 4, 4, 4, 5, 5)
