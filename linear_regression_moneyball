@@ -1,19 +1,218 @@
+library("ggplot2")
+library("ggthemes")
+library("scales")
+library("SDSFoundations")
+library("reshape2")
+
+#Datasets
 baseball = read.csv("baseball.csv")
-str(baseball)
 moneyball = subset(baseball, Year < 2002)
-str(moneyball)
-moneyball$RD = moneyball$RS - moneyball$RA # New Variable Run Difference (Runs Scored - Runs Allowed)
+realball = subset(baseball, Year >= 2002)
+moneyball$RD = moneyball$RS - moneyball$RA
+realball$RD = realball$RS - realball$RA
+oakyank9812 = read.csv("oakyank9812.csv")
+oaknyynymbos9812 = read.csv("oaknyynymbos9812.csv")
 
-plot(moneyball$RD, moneyball$W)
+oak9812 = subset(baseball, Team == "OAK" & Year >= 1998)
+oak9812$WinRate = oak9812$W/oak9812$G
 
-WinsReg = lm(W ~ RD, data = moneyball)
-summary(WinsReg) # W = 80.88 + 0.11(RD); if W >= 95, then RD has to be >= 133.4
+nyy9812 = subset(baseball, Team == "NYY" & Year >= 1998)
+nyy9812$WinRate = nyy9812$W/nyy9812$G
 
-RunsScoredReg = lm(RS ~ OBP + SLG, data = moneyball)
-summary(RunsScoredReg) # RS = -804.63 + 2737.77(OBP) + 1584.91(SLG)
+bos9812 = subset(baseball, Team == "BOS" & Year >= 1998)
+bos9812$WinRate = bos9812$W/bos9812$G
 
-RunsAllowedReg = lm(RA ~ OOBP + OSLG, data = moneyball)
-summary(RunsAllowedReg) # RA = -837.38 + 2913.60(OOBP) + 1514.29(OSLG)
+nym9812 = subset(baseball, Team == "NYM" & Year >= 1998)
+nym9812$WinRate = nym9812$W/nym9812$G
+
+
+
+#Moneyball Story
+qplot(Budget, Win.Rate, data = oakyank9812, color = Team) +
+  geom_point(size = 4) +
+  geom_text(data = oakyank9812, aes(Budget, Win.Rate, label = Year), size = 4, hjust = 1.5) +
+  scale_color_manual(values = c("darkblue", "darkgreen")) +
+  labs(title = "OAK vs. NYY", x = "Budget", y = "Win Rate") +
+  scale_x_continuous(labels = dollar) +
+  scale_y_continuous(labels = percent) +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        axis.title.x = element_text(size = 14, face = "bold"),
+        axis.title.y = element_text(size = 14, face = "bold"),
+        axis.text.x = element_text(size=14), 
+        axis.text.y = element_text(size=14))
+
+summary(oakyank9812)
+mean(oakyank9812$Win.Rate[which(oakyank9812$Team == "OAK")])
+mean(oakyank9812$Win.Rate[which(oakyank9812$Team == "NYY")])
+mean(oakyank9812$Win.Rate[which(oakyank9812$Team == "OAK")]) - mean(oakyank9812$Win.Rate[which(oakyank9812$Team == "NYY")])
+mean(oakyank9812$Budget[which(oakyank9812$Team == "OAK")])
+mean(oakyank9812$Budget[which(oakyank9812$Team == "NYY")])
+mean(oakyank9812$Budget[which(oakyank9812$Team == "OAK")]) - mean(oakyank9812$Budget[which(oakyank9812$Team == "NYY")])
+
+qplot(Budget, Win.Rate, data = oaknyynymbos9812, color = Team) +
+  geom_point(size = 4) +
+  geom_text(data = oaknyynymbos9812, aes(Budget, Win.Rate, label = Year), size = 4, hjust = 1.5) +
+  scale_color_manual(values = c("darkred", "darkorange", "darkblue", "darkgreen")) +
+  labs(title = "OAK vs. NYY vs. BOS. vs. NYM", x = "Budget", y = "Win Rate") +
+  scale_x_continuous(labels = dollar) +
+  scale_y_continuous(labels = percent) +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        axis.title.x = element_text(size = 14, face = "bold"),
+        axis.title.y = element_text(size = 14, face = "bold"),
+        axis.text.x = element_text(size=14), 
+        axis.text.y = element_text(size=14))
+
+qplot(Budget, Win.Rate, data = oaknyynymbos9812, color = Team, facets = ~Team) +
+  geom_point(size = 4) +
+  geom_text(data = oaknyynymbos9812, aes(Budget, Win.Rate, label = Year), size = 4, hjust = 1.5) +
+  scale_color_manual(values = c("darkred", "darkorange", "darkblue", "darkgreen")) +
+  labs(title = "OAK vs. NYY vs. BOS vs. NYM", x = "Budget", y = "Win Rate") +
+  scale_x_continuous(labels = dollar) +
+  scale_y_continuous(labels = percent) +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        axis.title.x = element_text(size = 14, face = "bold"),
+        axis.title.y = element_text(size = 14, face = "bold"),
+        axis.text.x = element_text(size=14), 
+        axis.text.y = element_text(size=14))
+
+
+
+# Wins Needed to Make the Playoffs
+qplot(Year, W, data = moneyball) +
+  geom_point(color = ifelse(moneyball$Playoffs == 1, "deepskyblue2", "grey"), size = 4) +
+  geom_point(color = "grey", size = 4, shape = 1) +
+  scale_y_continuous(breaks = seq(0, 120, 5)) +
+  labs(title = "Wins Needed for Playoffs", x = "Year", y = "Wins") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        axis.title.x = element_text(size = 16, face = "bold"),
+        axis.title.y = element_text(size = 16, face = "bold"),
+        axis.text.x = element_text(size=14, angle=45), 
+        axis.text.y = element_text(size=14, angle=0))
+
+avgPlayoffW = mean(moneyball$W[which(moneyball$Playoffs == 1)])
+
+# Run Difference Needed to Win
+qplot(RD, W, data = moneyball) + geom_point(color = "deepskyblue2", size = 3) +
+  geom_point(color = "grey", shape = 1, size = 3) +
+  geom_smooth(method = "lm", color = "red", size = 1, se = FALSE) +
+  labs(title = "Linear Relationship between Delta Runs and Wins", x = "Delta Runs", y = "Wins") +
+  scale_x_continuous(breaks = seq(-300, 300, 50)) +
+  scale_y_continuous(breaks = seq(0, 150, 10)) +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        axis.title.x = element_text(size = 16, face = "bold"),
+        axis.title.y = element_text(size = 16, face = "bold"),
+        axis.text.x = element_text(size=14, angle=0), 
+        axis.text.y = element_text(size=14, angle=0))
+
+avgW = lm(W ~ RD, data = moneyball)
+summary(avgW) # W = 80.8814 + 0.1058(RD); if we want W >= 95, then RD has to be >= 133.4
+RDModel = (avgPlayoffW - coef(avgW)[1])/coef(avgW)[2] #Model to calculate RD Needed for the lookup win value
+
+
+#Maximizing Runs Scored
+maxRS = lm(RS ~ OBP + SLG + BA, data = moneyball)
+
+corTableRS = data.frame(moneyball$W, moneyball$RS, moneyball$BA, moneyball$OBP, moneyball$SLG)
+cor(corTableRS)
+qplot(x = Var1, y = Var2, data = melt(cor(corTableRS, use = "p"))) +
+  geom_tile(aes(fill = value, position = "fill"), color = "white") +
+  labs(title = "Correlation Matrix of Offensive Metrics", x = " ", y = " ") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        axis.title.x = element_text(size = 16, face = "bold"),
+        axis.title.y = element_text(size = 16, face = "bold"),
+        axis.text.x = element_text(size=14, angle=0), 
+        axis.text.y = element_text(size=14, angle=0))
+
+maxRS2 = lm(RS ~ OBP + SLG, data = moneyball) #Better RS Model
+
+#Minimizing Runs Allowed
+minRA = lm(RA ~ OOBP + OSLG, data = moneyball)
+
+corTableRA = data.frame(moneyball$W, moneyball$RA, moneyball$OOBP, moneyball$OSLG)
+cor(corTableRA, use = "pairwise.complete.obs")
+qplot(x = Var1, y = Var2, data = melt(cor(corTableRA, use = "p"))) +
+  geom_tile(aes(fill = value, position = "fill"), color = "white") +
+  labs(title = "Correlation Matrix of Defensive Metrics", x = " ", y = " ") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        axis.title.x = element_text(size = 16, face = "bold"),
+        axis.title.y = element_text(size = 16, face = "bold"),
+        axis.text.x = element_text(size=14, angle=0), 
+        axis.text.y = element_text(size=14, angle=0))
+
+# 2002 Predictions Using 2001 Performance
+obpLookup =  moneyball$OBP[which(moneyball$Team == "OAK" & moneyball$Year == 2001)]
+slgLookup = moneyball$SLG[which(moneyball$Team == "OAK" & moneyball$Year == 2001)]
+rsModel = coef(maxRS2)[1] + (coef(maxRS2)[2]*obpLookup) + (coef(maxRS2)[3]*slgLookup)
+
+oobpLookup = moneyball$OOBP[which(moneyball$Team == "OAK" & moneyball$Year == 2001)]
+oslgLookup = moneyball$OSLG[which(moneyball$Team == "OAK" & moneyball$Year == 2001)]
+raModel = coef(minRA)[1] + (coef(minRA)[2]*oobpLookup) + (coef(minRA)[3]*oslgLookup)
+
+rdLookup = rsModel - raModel
+winModel = coef(avgW)[1] + (coef(avgW)[2]*rdLookup)
+
+pred2001 = data.frame(winModel, rdLookup, rsModel, raModel)
+oak2002 = subset(realball, Team == "OAK" & Year == 2002)
+
+
+
+
+
+#Winning World Series
+SeasonWins = subset(madePlayoffs, RankSeason == 1)
+hist(SeasonWins$RankPlayoffs)
+winWS = subset(moneyball, RankPlayoffs == 1)
+summary(winWS)
+
+sort(table(winWS$RankSeason), decreasing = TRUE)
+hist(winWS$RankSeason)
+sort(table(winWS$W), decreasing = TRUE)
+hist(winWS$W)
+sort(table(winWS$RD), decreasing = TRUE)
+hist(winWS$RD)
+
+
+oak9812 = subset(baseball, Year >= 1998 & Year <= 2012 & Team == "OAK")
+oak9812$WinRate = oak9812$W/oak9812$G
+oak9812$Budget = c(55372500,
+                   66536500,
+                   51654900,
+                   62313035,
+                   47967126,
+                   79366940,
+                   62243079,
+                   55869262,
+                   59825167,
+                   50260834,
+                   39679746,
+                   33810750,
+                   31971333,
+                   24175333,
+                   22463500)
+
+yank9812 = subset(baseball, Year >= 1998 & Year <= 2012 & Team == "NYY")
+yank9812$WinRate = yank9812$W/yank9812$G
+yank9812$Budget = c(197962289,
+                    201689030,
+                    206333389,
+                    201449289,
+                    209081577,
+                    189639045,
+                    194663079,
+                    205938439,
+                    182835513,
+                    152749814,
+                    125928583,
+                    109791893,
+                    92538260,
+                    88180712,
+                    65663698)
+
+
+
+
+
+
 
 
 player = c("chavez", "giambi", "menechino", "myers", "pena")
@@ -22,10 +221,12 @@ slg = c(0.540, 0.450, 0.374, 0.447, 0.500)
 salary = c(1400000, 1065000, 295000, 800000, 300000)
 
 roster = data.frame(player, obp, slg, salary)
+roster
 str(roster)
 plot(roster$obp ~ roster$salary)
 plot(roster$slg ~ roster$salary)
 x = -804.63 + 2737.77*roster$obp + 1584.91*roster$slg
+x
 
 
 teamRank = c(1, 2, 3, 3, 4, 4, 4, 4, 5, 5)
@@ -34,3 +235,9 @@ win2013 = c(97, 97, 92, 93, 92, 96, 94, 96, 92, 90)
 
 cor(teamRank, win2012)
 cor(teamRank, win2013)
+
+
+
+#Logistic Regression
+baseball2 = subset(baseball, Playoffs == 1) #Subset playoff teams only
+table(table(baseball2$Year))
