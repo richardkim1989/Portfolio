@@ -1,0 +1,47 @@
+songs = read.csv("songs.csv")
+str(songs)
+
+#Data Exploration
+table(songs$year == 2010)
+table(songs$artistname == 'Michael Jackson')
+subset(songs, artistname == 'Michael Jackson' & Top10 == 1)$songtitle
+table(songs$timesignature)
+songs$songtitle[which.max(songs$tempo)]
+
+#Predictive Model
+train = subset(songs, year <= 2009)
+test = subset(songs, year > 2009)
+nonvar = c("year", "songtitle", "artistname", "songID", "artistID") #Variables that we won't use in our model
+train = train[,!(names(train)%in%nonvar)] #Remove nonvar variables from your training set
+test = test[,!(names(test)%in%nonvar)] #Remove nonvar variables from your testing set
+
+model1 = glm(Top10 ~ ., data = train, family = 'binomial') #Logistic regression model to predict Top10 using all of the other variables as the independent variables.
+summary(model1)
+  ##The higher the confidence about time signature, key and tempo, the more likely the song is to be in the Top 10
+  ##Mainstream listeners tend to prefer less complex songs
+  ##By inspecting the coefficient of the variable "loudness", mainstream listeners prefer songs with heavy instrumentation
+  ##However, mainstream listeners do not prefer songs with heavy instrumentation based on the coefficient of the "energy" variable
+
+#Eliminate Multicollinearity
+cor(train$loudness, train$energy)
+
+model2 = glm(Top10 ~ . - loudness, data = train, family = 'binomial') #Without the independent variable "loudness"
+summary(model2)
+  ##Model 2 suggests that songs with high energy levels tend to be more popular. This contradicts our observation in Model 1.
+
+model3 = glm(Top10 ~ . - energy, data = train, family = 'binomial') #Without the variable "energy".
+summary(model3)
+  ##Loudness has a positive coefficient estimate, meaning that our model predicts that songs with heavier instrumentation tend to be more popular. This is the same conclusion we got from Model 2.
+
+#Model Validation
+predbase = table(test$Top10) #baseline prediction
+predbase
+accuracybase = 314/(314+59)
+accuracybase
+
+pred = predict(model3, newdata = test, type = "response")
+table(test$Top10, pred >= 0.45) #using a threshold of 0.45
+accuracy = (309+19)/(309+5+40+19) #Model 3 correctly predicts that 19 songs will make Top 10 hits in 2010; it incorrectly predicts 5 songs will make Top 10 hits in 2010
+sensitivity = 19/(19+40)
+specificity = 309/(309+5)
+  ##Model 3 has a very high specificity, meaning that it favors specificity over sensitivity. While Model 3 only captures less than half of the Top 10 songs, it still can offer a competitive edge, since it is very conservative in its predictions.
