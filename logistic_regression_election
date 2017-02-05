@@ -1,0 +1,46 @@
+install.packages("mice")
+library("mice")
+
+polling = read.csv("PollingData.csv")
+str(polling)
+table(polling$Year)
+summary(polling)
+
+#Treat N/A Values
+simple = polling[c("Rasmussen", "SurveyUSA", "PropR", "DiffCount")]
+summary(simple)
+
+set.seed(144)
+imputed = complete(mice(simple))
+summary(imputed)
+
+polling$Rasmussen = imputed$Rasmussen
+polling$SurveyUSA = imputed$SurveyUSA
+summary(polling)
+
+#Split Training and Testing Datasets
+train = subset(polling, Year == 2004 | Year == 2008)
+test = subset(polling, Year == 2012)
+table(train$Republican) # naive baseline model
+
+table(sign(train$Rasmussen)) #smart baseline model
+table(train$Republican, sign(train$Rasmussen)) #smart baseline vs actual
+
+#Multicollinearity
+cor(train[c("Rasmussen", "SurveyUSA", "PropR", "DiffCount", "Republican")])
+
+#Logistic Models
+model1 = glm(Republican ~ PropR, data = train, family = "binomial")
+summary(model1)
+pred1 = predict(model1, type = "response")
+table(train$Republican, pred1 >= 0.5)
+
+model2 = glm(Republican ~ SurveyUSA + DiffCount, data = train, family = "binomial")
+summary(model2)
+pred2 = predict(model2, type = "response")
+table(train$Republican, pred2 >= 0.5)
+
+table(test$Republican, sign(test$Rasmussen)) #test data using baseline model
+testpred = predict(model2, newdata = test, type = "response" )
+table(test$Republican, testpred >= 0.5)
+subset(test, testpred >= 0.5 & Republican == 0)
