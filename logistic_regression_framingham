@@ -1,0 +1,30 @@
+library(caTools)
+library(ggplot2)
+library(ROCR)
+
+fram = read.csv('framingham.csv')
+
+#Data Exploration
+str(fram)
+summary(fram)
+ggplot(fram, aes(BMI, male, color = as.factor(TenYearCHD))) + geom_point() #Change independent variable names to explore
+
+#Split Test and Train sets
+set.seed(1000)
+split = sample.split(fram$TenYearCHD, SplitRatio = 0.65)
+train = subset(fram, split == TRUE)
+test = subset(fram, split == FALSE)
+
+#Build Model
+model1 = glm(TenYearCHD ~ ., data = train, family = 'binomial')
+summary(model1)
+
+1 - (sum(test$TenYearCHD)/nrow(test)) #baseline model (CHD = 0)
+
+predTest = predict(model1, type = 'response', newdata = test)
+confMatrixPredTest = table(test$TenYearCHD, predTest > 0.5)
+(confMatrixPredTest[1]+confMatrixPredTest[4])/sum(confMatrixPredTest) #Overall Accuracy
+
+#ROCR Curve
+rocrPred = prediction(predTest, test$TenYearCHD)
+as.numeric(performance(rocrPred, "auc")@y.values) #Calculates Area Under the ROCR Curve
