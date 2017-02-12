@@ -1,0 +1,88 @@
+library(ggplot2)
+library(caTools)
+library(ROCR)
+
+quality = read.csv('quality.csv')
+
+#Data Dictionary
+
+# MemberID numbers the patients from 1 to 131, and is just an identifying number.
+# InpatientDays is the number of inpatient visits, or number of days the person spent in the hospital.
+# ERVisits is the number of times the patient visited the emergency room.
+# OfficeVisits is the number of times the patient visited any doctor's office.
+# Narcotics is the number of prescriptions the patient had for narcotics.
+# DaysSinceLastERVisit is the number of days between the patient's last emergency room visit and the end of the study period (set to the length of the study period if they never visited the ER). 
+# Pain is the number of visits for which the patient complained about pain.
+# TotalVisits is the total number of times the patient visited any healthcare provider.
+# ProviderCount is the number of providers that served the patient.
+# MedicalClaims is the number of days on which the patient had a medical claim.
+# ClaimLines is the total number of medical claims.
+# StartedOnCombination is whether or not the patient was started on a combination of drugs to treat their diabetes (TRUE or FALSE).
+# AcuteDrugGapSmall is the fraction of acute drugs that were refilled quickly after the prescription ran out.
+# PoorCare is the outcome or dependent variable, and is equal to 1 if the patient had poor care, and equal to 0 if the patient had good care.
+
+
+#Exploring the Data
+summary(quality)
+str(quality)
+ggplot(quality, aes(OfficeVisits, Narcotics, color = as.factor(PoorCare))) + geom_point() 
+
+#Baseline Model
+table(quality$PoorCare) #Outcome variable
+baseline = 98 / (98+33)
+
+#Splitting Train and Test Data
+set.seed(88)
+split = sample.split(quality$PoorCare, SplitRatio = 0.75)
+train = subset(quality, split == TRUE)
+test = subset(quality, split == FALSE)
+
+#Building Logistic Regression Model
+model1 = glm(PoorCare ~ OfficeVisits + Narcotics, data = train, family = 'binomial')
+summary(model1)
+predictTrain = predict(model1, type = 'response')
+summary(predictTrain)
+tapply(predictTrain, train$PoorCare, mean)
+
+#Thresholding
+## A model with a high threshold will have a low sensitivity and a high specificity.
+## A model with a low threshold will have a high sensitivity and a low specificity.
+  ## Sensitivity (True Positive Rate) = True Positive / (True Positive + False Negatives)
+  ## Specificity (True Negative Rate) = True Negative / (True Negative + False Positives)
+# Choose best threshold for best tradeoff
+
+confMatrix1 = table(train$PoorCare, predictTrain > 0.5) #Confusion matrix with the threshold value of 0.5
+confMatrix1[4]/(confMatrix1[4]+confMatrix1[2]) #Sensitivity
+confMatrix1[1]/(confMatrix1[1]+confMatrix1[3]) #Specficity
+
+confMatrix2 = table(train$PoorCare, predictTrain > 0.7) #Confusion matrix with the threshold value of 0.7
+confMatrix2[4]/(confMatrix2[4]+confMatrix2[2]) #Sensitivity
+confMatrix2[1]/(confMatrix2[1]+confMatrix2[3]) #Specficity
+
+confMatrix3 = table(train$PoorCare, predictTrain > 0.2) #Confusion matrix with the threshold value of 0.7
+confMatrix3[4]/(confMatrix3[4]+confMatrix3[2]) #Sensitivity
+confMatrix3[1]/(confMatrix3[1]+confMatrix3[3]) #Specficity
+
+#ROC Curve
+rocrPred = prediction(predictTrain, train$PoorCare)
+rocrPerf = performance(rocrPred, 'tpr', 'fpr')
+plot(rocrPerf, colorize = TRUE, print.cutoffs.at = seq(0,1,0.1), text.adj = c(-0.2,1.7)) 
+
+#Making Preditions
+model1 = glm(PoorCare ~ OfficeVisits + Narcotics, data = train, family = 'binomial')
+summary(model1)
+predictTrain = predict(model1, type = 'response')
+summary(predictTrain)
+tapply(predictTrain, train$PoorCare, mean)
+
+predictTest = predict(model1, type = 'response', newdata = test)
+summary(predictTest)
+tapply(predictTest, test$PoorCare, mean)
+
+#Interpreting the Prediction Model
+confMatrixPred = table(test$PoorCare, predictTest > 0.3)
+(confMatrixPred[1]+confMatrixPred[4])/sum(confMatrixPred) #Overall Accuracy
+confMatrixPred[4]/(confMatrixPred[4]+confMatrixPred[2]) #Sensitivity / True Positive Rate
+1 - (confMatrixPred[4]/(confMatrixPred[4]+confMatrixPred[2])) #False Negative Rate
+confMatrixPred[1]/(confMatrixPred[1]+confMatrixPred[3]) #Specficity / True Negative Rate
+1 - (confMatrixPred[1]/(confMatrixPred[1]+confMatrixPred[3])) #False Positive Rate
