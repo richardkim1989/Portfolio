@@ -1,0 +1,120 @@
+library(caTools)
+library(ROCR)
+
+parole = read.csv('parole.csv')
+
+#Data Dictionary
+#male: 1 if the parolee is male, 0 if female
+#race: 1 if the parolee is white, 2 otherwise
+#age: the parolee's age (in years) when he or she was released from prison
+#state: a code for the parolee's state. 2 is Kentucky, 3 is Louisiana, 4 is Virginia, and 1 is any other state.
+#time.served: the number of months the parolee served in prison (limited by the inclusion criteria to not exceed 6 months).
+#max.sentence: the maximum sentence length for all charges, in months (limited by the inclusion criteria to not exceed 18 months).
+#multiple.offenses: 1 if the parolee was incarcerated for multiple offenses, 0 otherwise.
+#crime: a code for the parolee's main crime leading to incarceration. 2 is larceny, 3 is drug-related crime, 4 is driving-related crime, and 1 is any other crime.
+#violator: 1 if the parolee violated the parole, and 0 if the parolee completed the parole without violation.
+
+
+#Exploring Data
+str(parole)
+summary(parole)
+
+nrow(parole) #Total number of parolees
+nrow(subset(parole, violator == 1)) #Number of parole violators 
+
+#Preparing Datasets
+parole$state = as.factor(parole$state) #Convert unordered factors into factors
+parole$crime = as.factor(parole$crime) #Convert unordered factors into factors
+summary(parole)
+
+#Splitting Train and Test Sets
+set.seed(144)
+split = sample.split(parole$violator, SplitRatio = 0.7) #Splits data into Train and Test sets
+train = subset(parole, split == TRUE)
+test = subset(parole, split == FALSE)
+  nrow(train) / nrow(parole) #% of data in the Train set
+  nrow(test) / nrow(parole) #% of data in the Test set
+  
+#Building a Logistic Regression Model
+model1 = glm(violator ~ ., data = train, family = 'binomial') #Using violator as dependent variable, and all other varibles as independent variables
+summary(model1)
+
+  # Let A = Multiple Offender, Let B = Non-Multiple Offender
+  # ln(parole violation odds of A) = ln(parole violation odds of A) + 1.6119919
+  # exp(ln(parole violation odds of A)) = exp(ln(parole violation odds of A) + 1.6119919)
+  # exp(ln(parole violation odds of A)) = exp(ln(parole violation odds of A) * exp(1.6119919)
+  # parole violation odds of A = parole violation odds of A * exp(1.6119919)
+  # parole violation odds of A = parole violation odds of A * 5.01278606
+  ### A Parolee who committed multiple offenses has 5.01 times higher odds of being a violator
+  ### than a parolee who did not commit multiple offenses, but is otherwise identical
+
+#Sample Parolee
+  # Consider a parolee who is male, of white race, aged 50 years at prison release, 
+  # from the state of Maryland, served 3 months, had a maximum sentence of 12 months, 
+  # did not commit multiple offenses, and committed a larceny.
+
+sampleParolee = (summary(model1)$coef[1,1] 
+                + 1 * summary(model1)$coef[2,1] 
+                + 1 * summary(model1)$coef[3,1] 
+                + 50 * summary(model1)$coef[4,1] 
+                + 0 * summary(model1)$coef[5,1]  
+                + 0 * summary(model1)$coef[6,1]  
+                + 0 * summary(model1)$coef[7,1]  
+                + 3 * summary(model1)$coef[8,1]  
+                + 12 * summary(model1)$coef[9,1]  
+                + 0 * summary(model1)$coef[10,1]  
+                + 1 * summary(model1)$coef[11,1]  
+                + 0 * summary(model1)$coef[12,1]  
+                + 0 * summary(model1)$coef[13,1])
+exp(sampleParolee)
+1/(1+exp(-sampleParolee))
+
+# Evaluating the Model on the Testing Set
+predTest = predict(model1, type = 'response', newdata = test)
+summary(predTest)
+confMatrixPredTest = table(test$violator, as.numeric(predTest > 0.5))
+  (confMatrixPredTest[1]+confMatrixPredTest[4])/sum(confMatrixPredTest) #Overall Accuracy
+  confMatrixPredTest[4]/(confMatrixPredTest[4]+confMatrixPredTest[2]) #Sensitivity / True Positive Rate
+  1 - (confMatrixPredTest[4]/(confMatrixPredTest[4]+confMatrixPredTest[2])) #False Negative Rate
+  confMatrixPredTest[1]/(confMatrixPredTest[1]+confMatrixPredTest[3]) #Specficity / True Negative Rate
+  1 - (confMatrixPredTest[1]/(confMatrixPredTest[1]+confMatrixPredTest[3])) #False Positive Rate
+
+table(test$violator)[1] / sum(table(test$violator)) #baseline model accuracy of non-violators
+##The model at cutoff 0.5 has 12 false positives and 11 false negatives,
+##while the baseline model has 0 false positives and 23 false negatives.
+##Because a parole board is likely to assign more cost to a false negative,
+##the model at cutoff 0.5 is likely of value to the board.
+##From the previous question, the parole board would likely benefit from decreasing
+##the logistic regression cutoffs, which decreases the false negative rate
+##while increasing the false positive rate.
+
+
+##Consider a parole board using the model to predict whether parolees will be violators or not.
+##The job of a parole board is to make sure that a prisoner is ready to be released into free society,
+##and therefore parole boards tend to be particularily concerned about releasing prisoners
+##who will violate their parole. Which of the following most likely describes their preferences
+##and best course of action?
+
+##The board assigns more cost to a false negative than a false positive,
+##and should therefore use a logistic regression cutoff less than 0.5.
+##If the board used the model for parole decisions, 
+##a negative prediction would lead to a prisoner being granted parole, 
+##while a positive prediction would lead to a prisoner being denied parole. 
+##The parole board would experience more regret for releasing a prisoner 
+##who then violates parole (a negative prediction that is actually positive, or false negative)
+##than it would experience for denying parole to a prisoner 
+##who would not have violated parole (a positive prediction that is actually negative, 
+##or false positive). Decreasing the cutoff leads to more positive predictions, 
+##which increases false positives and decreases false negatives. 
+##Meanwhile, increasing the cutoff leads to more negative predictions, 
+##which increases false negatives and decreases false positives. 
+##The parole board assigns high cost to false negatives, and therefore should decrease the cutoff.
+  
+#ROCR Curve
+rocrPred = prediction(predTest, test$violator)
+as.numeric(performance(rocrPred, "auc")@y.values)
+
+##The AUC deals with differentiating between a randomly selected positive and negative example.
+##It is independent of the regression cutoff selected.
+##In this case, AUC is the probability the model can correctly differentiate
+##between a randomly selected parole violator and a randomly selected parole non-violator.
