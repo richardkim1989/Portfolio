@@ -1,0 +1,72 @@
+library(caTools)
+library(rpart)
+library(rpart.plot)
+library(rattle) #optional for fancier trees
+library(RColorBrewer) #optional for fancier trees
+library(ROCR) #for ROC curve
+library(randomForest)
+library(caret) #for cross validation
+library(e1071) #for cross validation
+
+stevens = read.csv('stevens.csv')
+str(stevens)
+
+set.seed(3000)
+spl = sample.split(stevens$Reverse, SplitRatio = 0.7)
+
+train = subset(stevens, spl == TRUE)
+test = subset(stevens, spl == FALSE)
+
+#Create CART Tree
+StevensTree = rpart(Reverse ~ Circuit + Issue + Petitioner + Respondent + LowerCourt + Unconst, data = train, method = 'class', minbucket = 25)
+prp(StevensTree, tweak = 2) #CART Tree
+
+#Make Prediction
+PredictCart = predict(StevensTree, newdata = test, type = 'class')
+table(test$Reverse, PredictCart) #accuracy = 0.6588235
+
+#Calculate ROC Curve
+PredictROC = predict (StevensTree, newdata = test)
+PredictROC
+pred = prediction(PredictROC[, 2], test$Reverse)
+perf = performance(pred, 'tpr', 'fpr')
+plot(perf)
+
+#Calculate AUC
+as.numeric(performance(pred, "auc")@y.values)
+
+#Create New CART Trees with minbucket = 5 and minbucket = 100
+StevensTree2 = rpart(Reverse ~ Circuit + Issue + Petitioner + Respondent + LowerCourt + Unconst, data = train, method = 'class', minbucket = 5)
+prp(StevensTree2, tweak = 2) #CART Tree
+
+StevensTree3 = rpart(Reverse ~ Circuit + Issue + Petitioner + Respondent + LowerCourt + Unconst, data = train, method = 'class', minbucket = 100)
+prp(StevensTree3, tweak = 2) #CART Tree
+
+#Build Random Forest
+train$Reverse = as.factor(train$Reverse) #need to convert outcome variable as factor for classificaton tree
+test$Reverse = as.factor(test$Reverse) #need to convert outcome variable as factor for classificaton tree
+
+StevensForest = randomForest(Reverse ~ Circuit + Issue + Petitioner + Respondent + LowerCourt + Unconst, data = train, nodesize = 25, ntree = 200)
+PredictForest = predict(StevensForest, newdata = test)
+table(test$Reverse, PredictForest) #accuracy = 0.6705882
+
+#Build More Random Forests with Seed = 100 and Seed = 200
+set.seed(100)
+StevensForest2 = randomForest(Reverse ~ Circuit + Issue + Petitioner + Respondent + LowerCourt + Unconst, data = train, nodesize = 25, ntree = 200)
+PredictForest2 = predict(StevensForest2, newdata = test)
+table(test$Reverse, PredictForest2) #accuracy = 0.6882353
+
+set.seed(200)
+StevensForest3 = randomForest(Reverse ~ Circuit + Issue + Petitioner + Respondent + LowerCourt + Unconst, data = train, nodesize = 25, ntree = 200)
+PredictForest3 = predict(StevensForest3, newdata = test)
+table(test$Reverse, PredictForest3) #accuracy = 0.7058824
+
+#k-Fold Cross-Validation
+numFolds = trainControl(method = 'cv', number = 10)
+cpGrid = expand.grid(.cp = seq(0.01, 0.5, 0.01))
+train(Reverse ~ Circuit + Issue + Petitioner + Respondent + LowerCourt + Unconst, data = train, method = 'rpart', trControl = numFolds, tuneGrid = cpGrid)
+
+StevensTreeCV = rpart(Reverse ~ Circuit + Issue + Petitioner + Respondent + LowerCourt + Unconst, data = train, method = 'class', cp = 0.18)
+PredictCV = predict(StevensTreeCV, newdata = test, type = 'class')
+table(test$Reverse, PredictCV) #accuracy = 0.7235294
+prp(StevensTreeCV)
