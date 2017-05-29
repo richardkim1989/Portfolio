@@ -1,0 +1,54 @@
+movies = read.table("movielens.txt", header = FALSE, sep = "|", quote = "\"")
+str(movies)
+
+#Add Column Names
+colnames(movies) = c("ID", "Title", "ReleaseDate", "VideoReleaseDate", "IMDB", "Unknown", "Action", "Adventure", "Animation", "Childrens", "Comedy", "Crime", "Documentary", "Drama", "Fantasy", "FilmNoir", "Horror", "Musical", "Mystery", "Romance", "SciFi", "Thriller", "War", "Western")
+str(movies)
+
+#Remove Unused Fields
+movies$ID = NULL
+movies$ReleaseDate = NULL
+movies$VideoReleaseDate = NULL
+movies$IMDB = NULL
+movies = unique(movies)
+str(movies)
+
+table(movies$Comedy) #502 comedies
+table(movies$Western) #27 western
+table(movies$Romance, movies$Drama) #romance and drama
+
+#Compute Distances for All Data Points
+distances = dist(movies[2:20], method = "euclidean")
+clusterMovies = hclust(distances, method = "ward")
+plot(clusterMovies)
+clusterGroups = cutree(clusterMovies, k = 10)
+
+#Clusters
+tapply(movies$Action, clusterGroups, mean)
+tapply(movies$Adventure, clusterGroups, mean)
+tapply(movies$Animation, clusterGroups, mean)
+tapply(movies$Childrens, clusterGroups, mean)
+tapply(movies$Comedy, clusterGroups, mean)
+tapply(movies$Crime, clusterGroups, mean)
+tapply(movies$Documentary, clusterGroups, mean)
+tapply(movies$Drama, clusterGroups, mean)
+tapply(movies$Fantasy, clusterGroups, mean)
+tapply(movies$FilmNoir, clusterGroups, mean)
+tapply(movies$Horror, clusterGroups, mean)
+tapply(movies$Musical, clusterGroups, mean)
+tapply(movies$Mystery, clusterGroups, mean)
+tapply(movies$Romance, clusterGroups, mean)
+tapply(movies$SciFi, clusterGroups, mean)
+tapply(movies$Thriller, clusterGroups, mean)
+tapply(movies$War, clusterGroups, mean)
+tapply(movies$Western, clusterGroups, mean)
+
+#Which Movie is in each Cluster?
+subset(movies, Title == 'Men in Black (1997)') #Row = 257
+clusterGroups[257]
+
+cluster2 = subset(movies, clusterGroups == 2)
+cluster2$Title[1:10]
+
+clusterGroups2 = cutree(clusterMovies, k = 2)
+colMeans(subset(movies[2:20], clusterGroups2 == 2))
