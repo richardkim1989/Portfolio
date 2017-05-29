@@ -1,0 +1,62 @@
+library(caTools)
+library(rpart)
+library(rpart.plot)
+
+claims = read.csv('ClaimsData.csv')
+
+#Data Exploration
+str(claims)
+summary(claims)
+table(claims$bucket2009)
+prop.table(table(claims$bucket2009))
+
+#Split Train and Test Sets
+set.seed(88)
+spl = sample.split(claims$bucket2009, SplitRatio = 0.6)
+train = subset(claims, spl == TRUE)
+test = subset(claims, spl == FALSE)
+
+#Baseline Model
+baseline = table(test$bucket2009, test$bucket2008) #accuracy = 0.6838135
+
+#Create Penalty Matrix (Left = Actual, Top = Predicted)
+penaltyMatrix = matrix(c(0, 1, 2, 3, 4, 
+                         2, 0, 1, 2, 3,
+                         4, 2, 0, 1, 2,
+                         6, 4, 2, 0, 1,
+                         8, 6, 4, 2, 0), byrow = TRUE, nrow = 5)
+
+#Apply Penalties to Baseline Model
+baselinePenalty = as.matrix(baseline) * penaltyMatrix
+
+#Calculate Penalty Error for Baseline Model
+sum(baselinePenalty) / nrow(test) #Penalty Error = 0.7386055
+
+#New Baseline Model with Predicted Cost Bucket = 1
+test$bucketpred = 1
+baseline2 = table(test$bucket2009, test$bucket2009) #accuracy = 0.671269964
+baselinePenalty2 = as.matrix(baseline2) * penaltyMatrix[ , 1]
+sum(baselinePenalty2) / nrow(test) #Penalty Error = 1.044301
+
+#Build CART Model
+claimstree = rpart(bucket2009 ~ age + alzheimers + arthritis + cancer + copd + depression + diabetes + heart.failure + ihd + kidney + osteoporosis + stroke + reimbursement2008 + bucket2008, data = train, method = 'class', cp = 0.00005)
+prp(claimstree)
+
+#Prediction Using CART Model 
+predtest = predict(claimstree, newdata = test, type = 'class')
+table(test$bucket2009, predtest) #accuracy = 0.7126669
+cartPenalty = as.matrix(table(test$bucket2009, predtest)) * penaltyMatrix
+sum(cartPenalty) / nrow(test) #Penalty Error = 0.7578902
+
+#Build CART Model with Loss Matrix
+claimstree2 = rpart(bucket2009 ~ age + alzheimers + arthritis + cancer + copd + depression + diabetes + heart.failure + ihd + kidney + osteoporosis + stroke + reimbursement2008 + bucket2008, data = train, method = 'class', cp = 0.00005, parms = list(loss = penaltyMatrix))
+
+#Prediction Using CART Model with Loss Matrix
+predtest2 = predict(claimstree2, newdata = test, type = 'class')
+table(test$bucket2009, predtest2) #accuracy = 0.6472746
+cartPenalty2 = as.matrix(table(test$bucket2009, predtest2)) * penaltyMatrix
+sum(cartPenalty2) / nrow(test) #Penalty Error = 0.6418161
+
+#If you look at the classification matrix for the second CART model, we predicted bucket 1 less frequently.
+#This is because, according to the penalty matrix, some of the worst types of errors are to predict bucket 1
+#when the actual cost bucket is higher.
