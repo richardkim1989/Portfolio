@@ -1,0 +1,24 @@
+healthy = read.csv('healthy.csv', header = FALSE)
+str(healthy)
+image(healthyMatrix, axes = FALSE, col= grey(seq(0, 1, length = 256)))
+
+#Hierarchial clustering
+healthyMatrix = as.matrix(healthy) 
+str(healthyMatrix)
+
+healthyVector = as.vector(healthyMatrix)
+
+distance = dist(healthyVector, method = 'euclidean') #error due to vector size
+str(healthyVector)
+
+#K-Means Clustering
+k = 5
+set.seed(1)
+kmc = kmeans(healthyVector, centers = k, iter.max = 1000)
+str(kmc)
+healthyClusters = kmc$cluster #Data split into clusters
+healthyCenters = kmc$centers #Mean intensity value of each cluster
+healthySize = kmc$size #Count of data points in each cluster
+dim(healthyClusters) = c(nrow(healthyMatrix), ncol(healthyMatrix))
+
+image(healthyClusters, axes = FALSE, col = rainbow(k))
