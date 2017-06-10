@@ -1,0 +1,32 @@
+#Load Data
+flower = read.csv('flower.csv', header = FALSE)
+str(flower)
+
+#Convert dataset into a matrix
+flowerMatrix = as.matrix(flower) #50 rows & 50 column = 50 x 50 pixel image
+str(flowerMatrix)
+
+#Convert dataset into a vector 
+flowerVector = as.vector(flowerMatrix)
+str(flowerVector)
+
+#Create distance matrix
+distance = dist(flowerVector, method = 'euclidian')
+
+#Hierarchial clustering
+clusterIntensity = hclust(distance, method = 'ward')
+
+#Plot cluster dendrogram
+plot(clusterIntensity)
+rect.hclust(clusterIntensity, k = 3, border = 'red')
+
+#Split data into clusters
+flowerClusters = cutree(clusterIntensity, k = 3)
+tapply(flowerVector, flowerClusters, mean) #find mean intensity value (0 = dark, 1 = light) of each cluster
+
+#Convert into matrix
+dim(flowerClusters) = c(50, 50)
+
+#View images
+image(flowerClusters, axes = FALSE)
+image(flowerMatrix, axes = FALSE, col = grey(seq(0,1, length = 256)))
