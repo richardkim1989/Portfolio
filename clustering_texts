@@ -1,0 +1,63 @@
+data = read.csv('dailykos.csv')
+str(data)
+
+###Hierarchical Clustering 
+#Build model
+distance = dist(data, method = 'euclidian')
+cluster = hclust(distance, method = "ward.D")
+
+#Plot dendrogram 
+plot(cluster) #2-3 clusters ideal, but 7-8 clusters more applicable
+clusterGroups = cutree(cluster, k = 7)
+
+#Subset by clusters
+cluster1 = subset(data, clusterGroups == 1)
+cluster2 = subset(data, clusterGroups == 2)
+cluster3 = subset(data, clusterGroups == 3)
+cluster4 = subset(data, clusterGroups == 4)
+cluster5 = subset(data, clusterGroups == 5)
+cluster6 = subset(data, clusterGroups == 6)
+cluster7 = subset(data, clusterGroups == 7)
+
+#View top six words in each cluster
+tail(sort(colMeans(cluster1)))
+tail(sort(colMeans(cluster2)))
+tail(sort(colMeans(cluster3)))
+tail(sort(colMeans(cluster4)))
+tail(sort(colMeans(cluster5)))
+tail(sort(colMeans(cluster6)))
+tail(sort(colMeans(cluster7)))
+#This computes the mean frequency values of each of the words in cluster 1, and then outputs the 6 words that occur the most frequently.
+#The colMeans function computes the column (word) means, the sort function orders the words in increasing order of the mean values,
+#and the tail function outputs the last 6 words listed, which are the ones with the largest column means.
+
+###K-Means Clustering
+#Build model
+k = 7
+set.seed(1000)
+kmc = kmeans(data, centers = k)
+str(kmc)
+
+#Subset by clusters
+table(kmc$cluster)
+kclusterGroups = kmc$cluster #Data split into clusters
+kcluster1 = subset(data, kclusterGroups == 1)
+kcluster2 = subset(data, kclusterGroups == 2)
+kcluster3 = subset(data, kclusterGroups == 3)
+kcluster4 = subset(data, kclusterGroups == 4)
+kcluster5 = subset(data, kclusterGroups == 5)
+kcluster6 = subset(data, kclusterGroups == 6)
+kcluster7 = subset(data, kclusterGroups == 7)
+
+#View top six words in each cluster
+tail(sort(colMeans(kcluster1)))
+tail(sort(colMeans(kcluster2)))
+tail(sort(colMeans(kcluster3)))
+tail(sort(colMeans(kcluster4)))
+tail(sort(colMeans(kcluster5)))
+tail(sort(colMeans(kcluster6)))
+tail(sort(colMeans(kcluster7)))
+
+
+###Hierarchical Clustering  vs K-Means Clustering
+table(clusterGroups, kclusterGroups)
