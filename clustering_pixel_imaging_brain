@@ -1,0 +1,51 @@
+###Healthy Brain MRI Image
+#Load 'healthy' dataset
+healthy = read.csv('healthy.csv', header = FALSE)
+str(healthy)
+
+#Create matrices and vectors
+healthyMatrix = as.matrix(healthy) 
+healthyVector = as.vector(healthyMatrix)
+
+#View greyscale image
+image(healthyMatrix, axes = FALSE, col= grey(seq(0, 1, length = 256)))
+
+#Hierarchial clustering (doesn't work due to vector size)
+distance = dist(healthyVector, method = 'euclidean')
+
+#K-Means clustering
+k = 5
+set.seed(1)
+kmc = kmeans(healthyVector, centers = k, iter.max = 1000)
+str(kmc)
+healthyClusters = kmc$cluster #Data split into clusters
+healthyCenters = kmc$centers #Mean intensity value of each cluster
+healthySize = kmc$size #Count of data points in each cluster
+dim(healthyClusters) = c(nrow(healthyMatrix), ncol(healthyMatrix))
+
+#View healthy brain image
+image(healthyClusters, axes = FALSE, col = rainbow(k))
+
+
+
+###Detecting Tumors
+#Load 'tumor' dataset
+library('flexclust')
+tumor = read.csv('tumor.csv', header = FALSE)
+
+#Create matrices and vectors
+tumorMatrix = as.matrix(tumor)
+tumorVector = as.vector(tumorMatrix)
+
+#View greyscale image
+image(tumorMatrix, axes = FALSE, col= grey(seq(0, 1, length = 256)))
+
+#Use 'healthy' dataset as training set
+kmc.kcca = as.kcca(kmc, healthyVector)
+
+#Predict tumor
+tumorClusters = predict(kmc.kcca, newdata = tumorVector)
+dim(tumorClusters) = c(nrow(tumorMatrix), ncol(tumorMatrix))
+
+#View tumor brain image
+image(tumorClusters, axes = FALSE, col = rainbow(k))
