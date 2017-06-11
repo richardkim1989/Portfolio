@@ -1,0 +1,34 @@
+library(ggplot2)
+who = read.csv('WHO.csv')
+str(who)
+
+#Scatter Plot
+scatterplot = ggplot(who, aes(x = GNI, y = FertilityRate))
+scatterplot + geom_point()
+scatterplot + geom_point(color = 'blue', size = 3, shape = 17)
+scatterplot + geom_point(color = 'darkred', size = 3, shape = 8)
+FertilityGNIplot = scatterplot + geom_point(color = 'darkred', size = 3, shape = 8) + ggtitle('Fertility Rate vs Gross National Income')
+
+#Save graph as PDF file
+pdf('myplot.pdf')
+print(FertilityGNIplot)
+dev.off()
+
+#Color plots by Region
+ggplot(who, aes(x = GNI, y = FertilityRate, color = Region)) + geom_point()
+
+#Color plot by LifeExpectancy
+ggplot(who, aes(x = GNI, y = FertilityRate, color = LifeExpectancy)) + geom_point()
+
+#Build lLinear regression
+ggplot(who, aes(x = FertilityRate, y = Under15)) + geom_point()
+ggplot(who, aes(x = log(FertilityRate), y = Under15)) + geom_point()
+
+model = lm(Under15 ~ log(FertilityRate), data = who)
+summary(model) #Multiple R-squared: 0.9391, Adjusted R-squared: 0.9387 
+
+#Add a linear regression line to scatter plot
+ggplot(who, aes(x = log(FertilityRate), y = Under15)) + geom_point() + stat_smooth(method = 'lm', level = 0.99, color = 'orange')
+
+#FertilityRate vs Under15 by Region
+ggplot(who, aes(x = FertilityRate, y = Under15, color = Region)) + geom_point() + scale_color_brewer(palette="Dark2") 
