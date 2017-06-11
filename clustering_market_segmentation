@@ -1,0 +1,75 @@
+library(caret)
+
+airlines = read.csv('AirlinesCluster.csv')
+summary(airlines)
+
+#Normalizing the Data
+preproc = preProcess(airlines)
+airlinesNorm = predict(preproc, airlines)
+summary(airlinesNorm) #all means = 0, all std dev = 1
+
+###Hierarchical Clustering 
+#Build model
+distance = dist(airlinesNorm, method = 'euclidian')
+cluster = hclust(distance, method = "ward.D")
+
+#Plot dendrogram 
+plot(cluster)
+clusterGroups = cutree(cluster, k = 5)
+
+#Subset by clusters
+cluster1 = subset(airlinesNorm, clusterGroups == 1)
+cluster2 = subset(airlinesNorm, clusterGroups == 2)
+cluster3 = subset(airlinesNorm, clusterGroups == 3)
+cluster4 = subset(airlinesNorm, clusterGroups == 4)
+cluster5 = subset(airlinesNorm, clusterGroups == 5)
+
+#Compare the average values in each of variable
+tapply(airlines$Balance, clusterGroups, mean)
+tapply(airlines$QualMiles, clusterGroups, mean)
+tapply(airlines$BonusMiles, clusterGroups, mean)
+tapply(airlines$BonusTrans, clusterGroups, mean)
+tapply(airlines$FlightMiles, clusterGroups, mean)
+tapply(airlines$FlightTrans, clusterGroups, mean)
+tapply(airlines$DaysSinceEnroll, clusterGroups, mean)
+
+#Cluster 1 has largest average values for DaysSinceEnroll.
+#Cluster 1 mostly contains customers with few miles, but who have been with the airline the longest.
+#Cluster 2 has the largest average values in the variables QualMiles, FlightMiles and FlightTrans. This cluster also has relatively large values in BonusTrans and Balance.
+#Cluster 2 mostly contains customers with a large amount of miles, mostly accumulated through flight transactions.
+#Cluster 3 has the largest values in Balance, BonusMiles, and BonusTrans. While it also has relatively large values in other variables, these are the three for which it has the largest values.
+#Cluster 3 mostly contains customers with a lot of miles, and who have earned the miles mostly through bonus transactions.
+#Cluster 4 does not have the largest values in any of the variables. .customers have the smallest value in DaysSinceEnroll, but they are already accumulating a reasonable number of miles.
+#Cluster 4 mostly contains relatively new customers who seem to be accumulating miles, mostly through non-flight transactions.
+#Cluster 5 does not have the largest values in any of the variables.
+#Cluster 5 mostly contains relatively new customers who don't use the airline very often.
+
+
+
+###K-Means Clustering 
+#Build model
+k = 5
+set.seed(88)
+kmc = kmeans(airlinesNorm, centers = k, iter.max = 1000)
+str(kmc)
+
+#Subset by clusters
+kcluster1 = subset(airlinesNorm, kclusterGroups == 1)
+kcluster2 = subset(airlinesNorm, kclusterGroups == 2)
+kcluster3 = subset(airlinesNorm, kclusterGroups == 3)
+kcluster4 = subset(airlinesNorm, kclusterGroups == 4)
+kcluster5 = subset(airlinesNorm, kclusterGroups == 5)
+
+#Compare the average values in each of variable
+table(kmc$cluster)
+kclusterGroups = kmc$cluster #Data split into clusters
+tapply(airlines$Balance, kclusterGroups, mean)
+tapply(airlines$QualMiles, kclusterGroups, mean)
+tapply(airlines$BonusMiles, kclusterGroups, mean)
+tapply(airlines$BonusTrans, kclusterGroups, mean)
+tapply(airlines$FlightMiles, kclusterGroups, mean)
+tapply(airlines$FlightTrans, kclusterGroups, mean)
+tapply(airlines$DaysSinceEnroll, kclusterGroups, mean)
+
+###Hierarchical Clustering  vs K-Means Clustering
+table(clusterGroups, kclusterGroups)
